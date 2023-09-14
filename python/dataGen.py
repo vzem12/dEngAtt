@@ -36,7 +36,7 @@ def userThread(id):
   enable = True
  
   while enable:
-    if datetime.datetime.strptime(date,f) >= datetime.datetime.now() and not state: break
+    if (datetime.datetime.strptime(date,f) >= datetime.datetime.now() and not state) or not scriptState: break
     if not state:
       user.watch_id += 1
       user.channel_id = random.randint(1,30)
@@ -49,7 +49,18 @@ def userThread(id):
     state = not state 
     return msg
 
-
+if __name__ == '__manin__':
+  scriptState = True
+  try:
+    users = list()
+    for id in range(999):
+      users.append(userThread(id+1))
     
+    for user in users:
+      user.start()
+    for user in users:
+      user.join()
+  except KeyboardInterrupt:
+    scriptState = False
     
 
