@@ -72,8 +72,8 @@ def userThread(id):
     if datetime.datetime.strptime(date,f) >= datetime.datetime.now() and not state: break
     if not state:
       user.watch_id += 1
-      user.channel_id = random.randrange(29)+1
-      delta = 7200
+      user.channel_id = random.randint(1,30)
+      delta = 9000
     else:
       delta = random.randint(1,random.choices([1,5,20],[172800, 28800, 5])[0]) #Выключение на 2 дня (от 0 до 2-х), на 8 часов, переключение каналов
       
