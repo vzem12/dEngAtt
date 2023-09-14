@@ -5,6 +5,7 @@ import datetime
 import random
 import json
 
+counter = 0
 f = '%d.%m.%Y %H:%M:%S'
 
 class UserInfo():
@@ -24,43 +25,38 @@ class UserInfo():
     return json.dumps(msg).encode('cp1251')
 
 def getLastDate(last, delta):
-  print(delta)
   rnd_seconds = random.randrange(delta)
   return (datetime.datetime.strptime(last, f) + datetime.timedelta(seconds=rnd_seconds)).strftime(f)
 
 def userThread(id):
+  global counter
+  
   user = UserInfo(id)
-  date = '01.01.2014 00:00:00'
+  date = '01.01.2022 00:00:00'
   date = getLastDate(date, 7200)
   state = False
-  enable = True
  
-  while enable:
-    if (datetime.datetime.strptime(date,f) >= datetime.datetime.now() and not state) or not scriptState: break
+  while True:
+    if datetime.datetime.strptime(date,f) >= datetime.datetime.now() and not state: break
+    counter += 1
     if not state:
       user.watch_id += 1
       user.channel_id = random.randint(1,30)
-      delta = 9000
+      delta = 7200
     else:
       delta = random.randint(1,random.choices([1,5,20],[172800, 28800, 5])[0]) #Выключение на 2 дня (от 0 до 2-х), на 8 часов, переключение каналов
       
     msg = user.infoGen(date, not state)
     date = getLastDate(date, delta)
     state = not state 
-    return msg
+    print(msg, counter)
 
-if __name__ == '__manin__':
+if __name__ == '__main__':
   scriptState = True
   try:
-    users = list()
-    for id in range(999):
-      users.append(userThread(id+1))
-    
-    for user in users:
-      user.start()
-    for user in users:
-      user.join()
-  except KeyboardInterrupt:
-    scriptState = False
+    for id in range(200):
+      userThread(id+1)
+  except:
+    print(counter)
     
 
