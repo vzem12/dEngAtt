@@ -20,6 +20,7 @@ cursor = conn.cursor()
 conn.rollback()
 cursor.execute(f"select * from zemtsov_chan_dict;")
 channels = cursor.fetchall()
+conn.close()
 chan_category = {'Федеральные':[],
                  'Спорт':[],
                  'Кино':[],
