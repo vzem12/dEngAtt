@@ -43,7 +43,7 @@ channel_difs = [
     chan_category['Музыка'],
     chan_category['Развлечения']],
     [10,30,30,20,40,50]],
-   [25,35,
+  [25,35,
     [chan_category['Федеральные'], 
     chan_category['Спорт'],
     chan_category['Кино'],
@@ -76,56 +76,53 @@ channel_difs = [
     chan_category['Развлечения']],
     [70,10,5,1,0,0]]
 ]
-    
-if __name__ == '__main__':
-  producer = KafkaProducer(bootstrap_servers='vm-strmng-s-1.test.local:9092')
 
-  def send_topic(queue,user):
-    global counter
-    while status_gen:
-      if dt.strptime(user.date,user.f) >= dt.now() and not user.state: break
-      counter += 1
-      msg = user.userGen()
-      producer.send(queue,msg)
-      time.sleep(0.005)
+def send_topic(queue,user):
+  global counter
+  while status_gen:
+    if dt.strptime(user.date,user.f) >= dt.now() and not user.state: break
+    counter += 1
+    msg = user.userGen()
+    producer.send(queue,msg)
+    time.sleep(0.01)
 
-  status_gen = True
+status_gen = True
+
+try:
+  for id in range(number_of_users):
+    queue = f'iptv_user_{id+1}'
+    user = UserInfo(id+1)
+    conn.rollback()
+    cursor.execute(f"select birth_date from zemtsov_names_dict where id={id+1};")
+    birthday = cursor.fetchone()[0]
+    today = dt.now()
+    age = today.year - birthday.year - ((today.month,today.day)<(birthday.month,birthday.day))
+    for dif in channel_difs:
+      if age in range(dif[0],dif[1]): 
+        user.channels_dif = [dif[2],dif[3]]
+        break
+    #print(channels_dif)
+    users.append(Thread(target=send_topic, args=(queue,user)))
 
   try:
-    for id in range(number_of_users):
-      queue = f'iptv_user_{id+1}'
-      user = UserInfo(id+1)
-      conn.rollback()
-      cursor.execute(f"select birth_date from zemtsov_names_dict where id={id+1};")
-      birthday = cursor.fetchone()[0]
-      today = dt.now()
-      age = today.year - birthday.year - ((today.month,today.day)<(birthday.month,birthday.day))
-      for dif in channel_difs:
-        if age in range(dif[0],dif[1]): 
-          user.channels_dif = [dif[2],dif[3]]
-          break
-      #print(channels_dif)
-      users.append(Thread(target=send_topic, args=(queue,user)))
-
-    try:
-      for user in users:
-        user.start()
-    except:
-      ststus_gen = False
-      for user in users:
-        user.join()
-    finally:
-      ststus_gen = False
-      for user in users:
-        user.join()
-  except KeyboardInterrupt:
+    for user in users:
+      user.start()
+  except:
     ststus_gen = False
-    try:
-      for user in users:
-        user.join()
-    except:
-      pass
+    for user in users:
+      user.join()
   finally:
-    print(counter)
-    producer.close()
-    conn.close()
+    ststus_gen = False
+    for user in users:
+      user.join()
+except KeyboardInterrupt:
+  ststus_gen = False
+  try:
+    for user in users:
+      user.join()
+  except:
+    pass
+finally:
+  print(counter)
+  producer.close()
+  conn.close()
