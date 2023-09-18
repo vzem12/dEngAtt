@@ -21,26 +21,21 @@ cursor = conn.cursor()
                                       
 raw_table = 'zemtsov_raw_data'
 
-cursor.execute(f'''CREATE TABLE IF NOT EXISTS {raw_table} (
+cursor.execute(f'''CREATE WRITABLE EXTERNAL TABLE IF NOT EXISTS {raw_table} (
                      id bigint,
                      date timestamp,
                      channel_id integer,
                      action boolean)
-                   WITH (
-	                   appendonly=true,
-	                   compresstype=zlib,
-	                   compresslevel=1,
-	                   orientation=column
-                   )
-                   DISTRIBUTED BY (date)
+                   LOCATION ('pxf://user/zemtsov/data/zemtsov_raw_data.avro?PROFILE=hdfs:AVRO&SERVER=Hadoop'
+                   FORMAT 'CUSTOM' (FORMATTER='pxfwritable_export')
                 ''') 
 cursor.execute(f'TRUNCATE TABLE {raw_table}')
 conn.commit()
 try:
   for message in consumer:
     msg = json.loads(message.value.decode('cp1251'))
-    print(f"{msg['id']}, {msg['date']}, {msg['channel_id']}, {msg['action']}")
-    #cursor.execute(f'''INSERT INTO {raw_table} (id,date,channel_id,action) values({msg["id"]}, '{msg["date"]}', {msg["channel_id"]}, {msg["action"]});''')
-    #conn.commit()
+    #print(f"{msg['id']}, {msg['date']}, {msg['channel_id']}, {msg['action']}")
+    cursor.execute(f'''INSERT INTO {raw_table} (id,date,channel_id,action) values({msg["id"]}, '{msg["date"]}', {msg["channel_id"]}, {msg["action"]});''')
+    conn.commit()
 finally:
   conn.close()
