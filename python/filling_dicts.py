@@ -1,18 +1,17 @@
-import pg8000
+import clickhouse_connect
 import csv
 import random
 from datetime import datetime as dt
 from datetime import timedelta as td
 import datetime
 
-conn = pg8000.connect(database='postgres',
-                      host='192.168.77.21', 
-                      port=5432, 
-                      user='zemtsov', 
-                      password='854ss')
-                     
-cursor = conn.cursor()
-                                      
+
+
+conn = clickhouse_connect.get_client(database='destudy',
+                                     host='vm-widest-m-1.test.local', 
+                                     port=8123, 
+                                     username='zemtsov', 
+                                     password='854ss')
 names_table = 'zemtsov_names_dict'
 channels_table = 'zemtsov_chan_dict'
                                       
@@ -20,24 +19,27 @@ def create_tables():
   commands = list()
   commands.append(f'''
     CREATE TABLE IF NOT EXISTS {names_table} (
-      id integer,
-      name varchar(60),
-      surname varchar(60),
-      birth_date date,
-      gender varchar(6));
+      id Int8,
+      name String,
+      surname String,
+      birth_date Date,
+      gender String)
+    ENGINE = MergeTree()
+    ORDER BY id;
   ''')
   commands.append(f'TRUNCATE TABLE {names_table};')
   commands.append(f'''
     CREATE TABLE IF NOT EXISTS {channels_table} (
-      id integer,
-      name varchar,
-      category varchar);
+      id Int8,
+      name String,
+      category String)
+    ENGINE = MergeTree()
+    ORDER BY id;
   ''')
   commands.append(f'TRUNCATE TABLE {channels_table};')
   
-  for command in commands:
-    cursor.execute(command)
-  conn.commit()
+  for command in commands:  
+    conn.command(command)
     
 def _genFSurname(surname):
   end = surname[-2:]
@@ -61,8 +63,7 @@ def filling_dicts():
     with open('channels.csv', 'r') as f:
       ch = csv.reader(f,delimiter=',')
       for channel in ch:
-        cursor.execute(f"INSERT INTO {channels_table} (id,name,category) values({channel[0]},'{channel[1]}','{channel[2]}');")
-      conn.commit()
+        conn.command(f"INSERT INTO {channels_table} (id,name,category) values({channel[0]},'{channel[1]}','{channel[2]}');")
 
     with open('surnames.txt', 'r') as f:
       surnames = list()
@@ -108,11 +109,10 @@ def filling_dicts():
         name = random.choice(names_female)
         surname = _genFSurname(random.choice(surnames))
       
-      cursor.execute(f'''INSERT INTO {names_table} 
+      conn.command(f'''INSERT INTO {names_table} 
                          (id,name,surname,birth_date,gender)
                          values ({id+1},'{name}','{surname}','{birth_date}','{gender}');
                       ''')
-    conn.commit()
   finally:
     conn.close()
     
