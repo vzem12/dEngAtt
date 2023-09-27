@@ -10,6 +10,7 @@ format 'CUSTOM' (FORMATTER='pxfwritable_import');
 
 
 
+
 create view zemtsov_raw_data_view (user_id, start_view, end_view, channel_id) as
 select s_data.user_id, s_data.start_view, e_data.end_view, s_data.channel_id
 from 
@@ -28,6 +29,7 @@ on s_data.id = e_data.id;
 
 
 
+  
 create view zemtsov_data_user_view (user_id, age, gender, city, start_view, end_view, channel_id, channel_name, channel_group) as 
 select users.user_id, 
        users.age,
@@ -53,8 +55,7 @@ on users.channel_id = channels.id;
 
 
 
-
-create materialized view zemtsov_channel_gender_age (ages, gender, channel, channel_group, city) as 
+create materialized view zemtsov_iptv_data as 
 select 
 case 
 	when age >=18 and age <25 then '18-25'
@@ -65,24 +66,18 @@ case
 	when age >=65 and age <75 then '65-75'
 	when age >=75 then 'over 75'
 end as ages,
-gender, channel_name, channel_group, city
-from zemtsov_data_user_view
-where extract(year from start_view)='2022' ;
+user_id,
+gender, 
+channel_name as channel,
+channel_group, 
+city,
+to_char(start_view,'yyyy-mm-dd')::date as date,
+start_view,
+end_view,
+(end_view - start_view) as time_view,
+extract(hour from start_view) as start_hour,
+extract(hour from end_view) as end_hour
+from zemtsov_data_user_view;
 
 
-
-create materialized view zemtsov_time_data (channel, date, start_hour, end_hour, views) as 
-select 
-	channel_name, 
-	to_char(start_view,'yyyy-mm-dd') as date,
-	count(extract(hour from start_view)) as start_hour, 
-	count(extract(hour from end_view)) as end_hour,
-	count(*)
-from zemtsov_data_user_view
-group by(channel_name,date);
-
-drop materialized view zemtsov_time_data;
-select * from zemtsov_time_data limit 10;
-
-
-refresh materialized view zemtsov_channel_gender_age;
+select * from zemtsov_iptv_data order by random() limit 10;
